@@ -57,6 +57,13 @@ const googleSheetsActionSchema = z.object({
   refreshToken: z.string().min(1, "Google Sheets authentication required"),
 });
 
+const llmActionSchema = z.object({
+  provider: z.string().min(1, "LLM Provider is required"),
+  apiKey: z.string().min(1, "API Key is required"),
+  model: z.string().min(1, "Model is required"),
+  prompt: z.string().min(1, "Prompt is required"),
+});
+
 // Map schemas to trigger/action names
 export const TRIGGER_SCHEMAS: Record<string, z.ZodSchema<any>> = {
   linkedintrigger: linkedinJobSchema,
@@ -68,4 +75,6 @@ export const ACTION_SCHEMAS: Record<string, z.ZodSchema<any>> = {
   email: emailActionSchema,
   solana: solanaActionSchema,
   googlesheets: googleSheetsActionSchema,
+  llm: llmActionSchema,
 };
+

@@ -2,11 +2,62 @@ import { Router } from "express";
 import { authMiddleware } from "../middleware";
 import { ZapCreateSchema } from "../types";
 import { PrismaTransactionalClient } from "../db";
+import { encrypt } from "../utils/crypto";
 
 import { prismaClient } from "@flowentis/database";
 import axios from "axios";
 
 const router = Router();
+
+// Helper to encrypt LLM API keys in action metadata
+async function processActionsMetadata(actions: any[]) {
+  const availableActions = await prismaClient.availableAction.findMany();
+  const llmAction = availableActions.find((a) => a.name === "LLM");
+  const masterKey = process.env.SOLANA_MASTER_KEY;
+
+  return actions.map((action) => {
+    const isLlm = llmAction && action.availableActionId === llmAction.id;
+    if (isLlm && action.actionMetadata && typeof action.actionMetadata === "object") {
+      const metadata = { ...action.actionMetadata };
+      if (metadata.apiKey && !metadata.apiKey.startsWith("ENC::")) {
+        if (masterKey) {
+          metadata.apiKey = `ENC::${encrypt(metadata.apiKey, masterKey)}`;
+        } else {
+          console.error("Encryption master key not configured!");
+        }
+      }
+      return {
+        ...action,
+        actionMetadata: metadata,
+      };
+    }
+    return action;
+  });
+}
+
+// Helper to mask sensitive keys in responses
+function maskZapActions(zap: any) {
+  if (!zap) return zap;
+  const zapCopy = { ...zap };
+  if (zapCopy.actions) {
+    zapCopy.actions = zapCopy.actions.map((action: any) => {
+      if (action.metadata) {
+        const metadata = { ...action.metadata };
+        if (metadata.apiKey) {
+          metadata.apiKey = "••••••••";
+        }
+        return {
+          ...action,
+          metadata,
+        };
+      }
+      return action;
+    });
+  }
+  return zapCopy;
+}
+
+
 
 function getScraperType(scraperType: string) {
   if (scraperType.includes("Indeed")) {
@@ -32,6 +83,7 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 
   try {
+    const processedActions = await processActionsMetadata(parsedData.data.actions);
     const ID = await prismaClient.$transaction(
       async (tx: PrismaTransactionalClient) => {
         // Create the zap with actions in a single transaction
@@ -41,7 +93,7 @@ router.post("/", authMiddleware, async (req, res) => {
             isActive: true,
             triggerId: "", // Temporary triggerId
             actions: {
-              create: parsedData.data.actions.map((r, index) => ({
+              create: processedActions.map((r, index) => ({
                 actionId: r.availableActionId,
                 sortingOrder: index,
                 metadata: r.actionMetadata,
@@ -49,6 +101,7 @@ router.post("/", authMiddleware, async (req, res) => {
             },
           },
         });
+
 
         // Create the trigger and associate it with the zap
         const trigger = await tx.trigger.create({
@@ -109,9 +162,10 @@ router.get("/all", authMiddleware, async (req, res) => {
   });
 
   res.json({
-    zaps: zaps.length > 0 ? zaps : [],
+    zaps: zaps.length > 0 ? zaps.map(maskZapActions) : [],
   });
 });
+
 
 router.get("/:zapId", authMiddleware, async (req, res) => {
   // @ts-ignore
@@ -138,9 +192,10 @@ router.get("/:zapId", authMiddleware, async (req, res) => {
   });
 
   res.json({
-    zap,
+    zap: maskZapActions(zap),
   });
 });
+
 
 router.put("/:zapId", authMiddleware, async (req, res) => {
   const { zapId } = req.params;
@@ -156,6 +211,7 @@ router.put("/:zapId", authMiddleware, async (req, res) => {
   }
 
   try {
+    const processedActions = await processActionsMetadata(parsedData.data.actions);
     const updatedZap = await prismaClient.$transaction(async (tx) => {
       // Update the trigger
       const trigger = await tx.trigger.update({
@@ -173,7 +229,7 @@ router.put("/:zapId", authMiddleware, async (req, res) => {
 
       // Create new actions
       const actions = await Promise.all(
-        parsedData.data.actions.map((action, index) =>
+        processedActions.map((action, index) =>
           tx.action.create({
             data: {
               zapId,
@@ -197,9 +253,10 @@ router.put("/:zapId", authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      updatedZap,
+      updatedZap: maskZapActions(updatedZap),
     });
   } catch (error) {
+
     console.error("Failed to update Zap:", error);
     res.status(500).json({ message: "Failed to update Zap" });
   }

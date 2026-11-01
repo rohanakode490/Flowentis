@@ -8,7 +8,7 @@ export const Integrations = [...new Array(3)].map((_, index) => ({
 }));
 
 export const links = [
-  { href: "/features", label: "Features" },
+  { href: "/#features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Documentation" },
 ];
@@ -288,7 +288,50 @@ export const ACTION_FORM_FIELDS: Record<string, FormField[]> = {
       required: true,
     },
   ],
+  llm: [
+    {
+      type: "select",
+      label: "LLM Provider",
+      name: "provider",
+      placeholder: "Select LLM Provider",
+      options: [
+        { value: "gemini", label: "Google Gemini" },
+        { value: "openai", label: "OpenAI" },
+        { value: "anthropic", label: "Anthropic Claude" },
+      ],
+      required: true,
+    },
+    {
+      type: "password",
+      label: "API Key",
+      name: "apiKey",
+      placeholder: "Enter API Key",
+      required: true,
+    },
+    {
+      type: "select",
+      label: "Model",
+      name: "model",
+      placeholder: "Select Model",
+      options: [
+        { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Recommended)" },
+        { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
+        { value: "gpt-4o-mini", label: "GPT-4o Mini" },
+        { value: "gpt-4o", label: "GPT-4o" },
+        { value: "claude-3-5-sonnet-latest", label: "Claude 3.5 Sonnet" },
+      ],
+      required: true,
+    },
+    {
+      type: "text",
+      label: "Prompt Template",
+      name: "prompt",
+      placeholder: "Enter your prompt template. E.g. Summarize issue: {{trigger.issue_title}}",
+      required: true,
+    },
+  ],
 };
+
 
 export const GITHUB_TRIGGER_FIELDS_MAP: Record<string, string[]> = {
   issue_comment: [

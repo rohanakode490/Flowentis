@@ -23,7 +23,7 @@ router.post("/solana-key", authMiddleware, async (req, res) => {
 
     // This key should ideally be fetched from Infisical at startup and stored in a config
     const masterKey = process.env.SOLANA_MASTER_KEY;
-    
+
     if (!masterKey) {
       console.error("SOLANA_MASTER_KEY not found in environment");
       return res.status(500).json({ message: "Server configuration error" });
@@ -33,7 +33,7 @@ router.post("/solana-key", authMiddleware, async (req, res) => {
 
     await prismaClient.user.update({
       where: { id: userId },
-      data: { solanaPrivateKey: encryptedKey }
+      data: { solanaPrivateKey: encryptedKey },
     });
 
     return res.json({ message: "Solana key saved securely" });
@@ -167,6 +167,35 @@ router.get("/", authMiddleware, async (req, res) => {
     user,
     id,
   });
+});
+
+router.put("/", authMiddleware, async (req, res) => {
+  try {
+    //@ts-ignore
+    const id = req.id;
+    const { name } = req.body;
+
+    if (typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ message: "Valid name is required" });
+    }
+
+    const updatedUser = await prismaClient.user.update({
+      where: { id },
+      data: { name: name.trim() },
+      select: {
+        name: true,
+        email: true,
+      },
+    });
+
+    return res.json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 export const userRouter = router;

@@ -24,7 +24,8 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import useStore from "@/lib/store";
 import api from "@/lib/api";
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ShieldCheck, Unlink } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 declare global {
   interface Window {
@@ -34,16 +35,32 @@ declare global {
   }
 }
 
-const CONNECTIONS = [
+interface ConnectionItem {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  category: string;
+}
+
+const CONNECTIONS: ConnectionItem[] = [
   {
+    id: "google-sheets",
     title: "Google Sheets",
-    description: "Connect your Google account to access and update Google Sheets.",
-    image: "https://res.cloudinary.com/dmextegpu/image/upload/v1753959054/Google_Sheets_Logo_512px_gtxhsx.png",
+    category: "Productivity & Data",
+    description:
+      "Connect your Google account to automatically read rows and append new workflow records.",
+    image:
+      "https://res.cloudinary.com/dmextegpu/image/upload/v1753959054/Google_Sheets_Logo_512px_gtxhsx.png",
   },
   {
+    id: "solana",
     title: "Solana",
-    description: "Connect your Solana wallet to automate SOL transfers.",
-    image: "https://res.cloudinary.com/dmextegpu/image/upload/v1741162444/solana-sol-logo_fshz8v.png",
+    category: "Web3 & Blockchain",
+    description:
+      "Securely connect your Solana key to automate automated on-chain transfers and actions.",
+    image:
+      "https://res.cloudinary.com/dmextegpu/image/upload/v1741162444/solana-sol-logo_fshz8v.png",
   },
 ];
 
@@ -52,29 +69,35 @@ const Connections: React.FC = () => {
     "Google Sheets": false,
     Solana: false,
   });
+  const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSolanaModalOpen, setIsSolanaModalOpen] = useState(false);
   const [solanaPrivateKey, setSolanaPrivateKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { user: { setRefreshToken } } = useStore();
+
+  const {
+    user: { setRefreshToken },
+    ui: { addToast },
+  } = useStore();
   const router = useRouter();
 
   useEffect(() => {
     let mounted = true;
-    
+
     const checkConnections = async () => {
-        try {
-            const resp = await api.get("/user");
-            if (mounted) {
-                setConnections({
-                    "Google Sheets": !!resp.data.user.googleRefreshToken,
-                    Solana: !!resp.data.user.solanaPrivateKey,
-                });
-            }
-        } catch (e) {
-            console.error("Failed to fetch user connections", e);
+      try {
+        const resp = await api.get("/user");
+        if (mounted) {
+          setConnections({
+            "Google Sheets": !!resp.data.user.googleRefreshToken,
+            Solana: !!resp.data.user.solanaPrivateKey,
+          });
         }
+      } catch (e) {
+        console.error("Failed to fetch user connections", e);
+      } finally {
+        if (mounted) setIsFetching(false);
+      }
     };
 
     const waitForGoogle = async () => {
@@ -107,7 +130,8 @@ const Connections: React.FC = () => {
         redirect_uri: `${process.env.NEXT_PUBLIC_FRONTEND_URL}/callback`,
         callback: async (resp: any) => {
           if (!resp || !resp.code) {
-            setError("No code received from Google");
+            setError("No authorization code received from Google");
+            addToast("Google authorization cancelled", "error");
             return;
           }
           try {
@@ -120,10 +144,12 @@ const Connections: React.FC = () => {
             setRefreshToken(response.data.refresh_token || "");
             setConnections((prev) => ({ ...prev, "Google Sheets": true }));
             setError(null);
+            addToast("Google Sheets successfully connected!", "success");
             router.push("/workflows");
           } catch (err) {
             console.error("Token exchange error:", err);
             setError("Failed to authenticate with Google Sheets");
+            addToast("Failed to authenticate with Google Sheets", "error");
           }
         },
       });
@@ -131,27 +157,33 @@ const Connections: React.FC = () => {
 
     checkConnections();
     waitForGoogle();
-    
+
     return () => {
       mounted = false;
     };
-  }, [setRefreshToken, router]);
+  }, [setRefreshToken, router, addToast]);
 
   const handleSolanaConnect = async () => {
+    // Postel's law: Clean whitespace
+    const cleanKey = solanaPrivateKey.trim();
+    if (!cleanKey) return;
+
     setIsLoading(true);
     setError(null);
     try {
       const token = localStorage.getItem("token");
       await api.post(
         `/user/solana-key`,
-        { privateKey: solanaPrivateKey },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { privateKey: cleanKey },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setConnections((prev) => ({ ...prev, Solana: true }));
       setIsSolanaModalOpen(false);
       setSolanaPrivateKey("");
+      addToast("Solana wallet successfully connected!", "success");
     } catch (err) {
-      setError("Failed to save Solana private key. Please try again.");
+      setError("Failed to save Solana private key. Please check the key and try again.");
+      addToast("Failed to save Solana key", "error");
     } finally {
       setIsLoading(false);
     }
@@ -163,111 +195,170 @@ const Connections: React.FC = () => {
       setRefreshToken("");
     }
     setConnections((prev) => ({ ...prev, [type]: false }));
+    addToast(`${type} disconnected`, "success");
   };
 
   return (
-    <div className="relative flex flex-col gap-4">
-      <section className="flex flex-col gap-4 p-6 text-muted-foreground">
-        Connect all your apps directly from here. You may need to connect
-        these apps regularly to refresh verification.
-        {error && <p className="text-red-500 font-medium">{error}</p>}
-        
-        {CONNECTIONS.map((connection) => (
-          <Card key={connection.title} className="flex w-full items-center justify-between">
-            <CardHeader className="flex flex-row gap-4">
-              <div className="flex flex-row gap-2">
-                <Image src={connection.image} alt={connection.title} height={30} width={30} className="object-contain" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">{connection.title}</CardTitle>
-                <CardDescription>{connection.description}</CardDescription>
-              </div>
-            </CardHeader>
-            <div className="flex flex-col items-center gap-2 p-4">
-              {connections[connection.title] ? (
-                <div className="border-primary rounded-lg border-2 px-3 py-2 font-bold text-primary flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" /> Connected
+    <div className="relative flex flex-col gap-6 p-4 md:p-6 max-w-5xl">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight text-foreground">
+          Connected Applications
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Manage your third-party integrations and credentials. Connected apps allow Flowentis to execute actions on your behalf.
+        </p>
+      </div>
+
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Law of Common Region: All metadata and controls for each integration reside within that integration's card */}
+      <div className="grid gap-4">
+        {isFetching ? (
+          <div className="space-y-4">
+            <Skeleton className="h-28 w-full rounded-xl" />
+            <Skeleton className="h-28 w-full rounded-xl" />
+          </div>
+        ) : (
+          CONNECTIONS.map((connection) => {
+            const isConnected = !!connections[connection.title];
+            return (
+              <Card
+                key={connection.title}
+                className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 gap-4 transition-all border ${
+                  isConnected
+                    ? "border-primary/30 bg-card shadow-sm"
+                    : "border-border bg-card/60"
+                }`}
+              >
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="h-12 w-12 rounded-xl p-2 border border-border bg-background flex items-center justify-center shrink-0 shadow-xs">
+                    <Image
+                      src={connection.image}
+                      alt={connection.title}
+                      height={32}
+                      width={32}
+                      className="object-contain"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-foreground text-base">
+                        {connection.title}
+                      </h3>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                        {connection.category}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {connection.description}
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <Button 
-                  onClick={() => {
-                    if (connection.title === "Solana") {
-                      setIsSolanaModalOpen(true);
-                    } else if (window.googleCodeClient) {
-                      window.googleCodeClient.requestCode();
-                    } else {
-                      setError("Google auth not ready yet");
-                    }
-                  }}
-                >
-                  Connect
-                </Button>
-              )}
-            </div>
-          </Card>
-        ))}
-        {Object.keys(connections).some((key) => connections[key]) && (
-            <div className="mt-4">
-              <h2 className="text-lg font-bold">Disconnect Apps</h2>
-              {CONNECTIONS.map((connection) =>
-                connections[connection.title] ? (
-                  <button
-                    key={connection.title}
-                    onClick={() => handleDisconnect(connection.title)}
-                    className="m-2 rounded-lg bg-destructive p-2 font-bold text-destructive-foreground hover:bg-destructive/90 transition-colors"
-                  >
-                    Disconnect {connection.title}
-                  </button>
-                ) : null,
-              )}
-            </div>
-          )}
-      </section>
+
+                {/* Law of Common Region & Proximity: Actions grouped directly with the card */}
+                <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
+                  {isConnected ? (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Connected
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDisconnect(connection.title)}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs h-9"
+                      >
+                        <Unlink className="h-3.5 w-3.5 mr-1" />
+                        Disconnect
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="font-medium text-xs px-4 h-9 shadow-xs"
+                      onClick={() => {
+                        if (connection.title === "Solana") {
+                          setIsSolanaModalOpen(true);
+                        } else if (window.googleCodeClient) {
+                          window.googleCodeClient.requestCode();
+                        } else {
+                          setError("Google authentication service is initializing. Please retry in a moment.");
+                        }
+                      }}
+                    >
+                      Connect
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </div>
 
       {/* Solana Connection Modal */}
       <Dialog open={isSolanaModalOpen} onOpenChange={setIsSolanaModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Image src="https://res.cloudinary.com/dmextegpu/image/upload/v1741162444/solana-sol-logo_fshz8v.png" alt="Solana" height={24} width={24} />
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Image
+                src="https://res.cloudinary.com/dmextegpu/image/upload/v1741162444/solana-sol-logo_fshz8v.png"
+                alt="Solana"
+                height={22}
+                width={22}
+              />
               Connect Solana Wallet
             </DialogTitle>
-            <DialogDescription className="space-y-3 pt-4">
-              <div className="flex gap-3 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg text-orange-600">
-                <AlertTriangle className="h-5 w-5 shrink-0" />
-                <p className="text-xs font-medium">
-                  <strong>WARNING:</strong> This feature is currently in the <strong>testing phase</strong>. 
-                  We do not recommend using it with wallets containing significant funds yet.
+            <DialogDescription className="space-y-3 pt-2 text-left">
+              <div className="flex gap-2.5 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p className="text-xs leading-relaxed font-normal">
+                  <strong>Notice:</strong> This integration is currently in preview. We recommend testing with development or low-balance wallets.
                 </p>
               </div>
-              <p className="text-sm">
-                To automate transfers, we need your Solana Private Key (Base58). 
-                Your key is encrypted with AES-256-GCM before being stored.
+              <p className="text-xs text-muted-foreground">
+                Your private key will be encrypted on the server using AES-256-GCM before being stored.
               </p>
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="privateKey">Private Key (Base58)</Label>
-              <Input
-                id="privateKey"
-                type="password"
-                placeholder="Enter your Solana private key"
-                value={solanaPrivateKey}
-                onChange={(e) => setSolanaPrivateKey(e.target.value)}
-              />
-              <p className="text-[10px] text-muted-foreground italic">
-                Example: 5K... (Never share this with anyone else)
-              </p>
-            </div>
+          <div className="grid gap-3 py-2 text-left">
+            <Label htmlFor="privateKey" className="text-xs font-semibold">
+              Private Key (Base58)
+            </Label>
+            <Input
+              id="privateKey"
+              type="password"
+              placeholder="Enter Base58 private key..."
+              value={solanaPrivateKey}
+              onChange={(e) => setSolanaPrivateKey(e.target.value)}
+              className="text-sm font-mono h-10"
+              autoComplete="off"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Example format: 5K... (Keep your private keys strictly confidential)
+            </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSolanaModalOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleSolanaConnect} 
-              disabled={isLoading || !solanaPrivateKey}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSolanaModalOpen(false)}
+              disabled={isLoading}
             >
-              {isLoading ? "Saving..." : "Securely Save Key"}
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSolanaConnect}
+              disabled={!solanaPrivateKey.trim() || isLoading}
+              isLoading={isLoading}
+            >
+              Securely Save Key
             </Button>
           </DialogFooter>
         </DialogContent>

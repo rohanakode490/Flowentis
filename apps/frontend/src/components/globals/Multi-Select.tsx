@@ -45,9 +45,7 @@ export const MultiSelect = ({
     }),
     option: (provided: any, state: any) => ({
       ...provided,
-      backgroundColor: state.isFocused
-        ? "var(--accent)"
-        : "transparent",
+      backgroundColor: state.isFocused ? "var(--accent)" : "transparent",
       color: state.isFocused ? "var(--accent-foreground)" : "var(--foreground)",
     }),
     multiValue: (provided: any) => ({

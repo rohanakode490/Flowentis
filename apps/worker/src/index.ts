@@ -7,6 +7,8 @@ import { parseDynamicFields } from "./parser";
 import { sendEmail } from "./email";
 import { transferSOL } from "./solana";
 import { decrypt } from "./utils/crypto";
+import { executeLLM } from "./llm";
+
 import { loadTemplate, renderTemplate } from "./templateLoader";
 import {
   appendColumnToSheet,
@@ -189,7 +191,7 @@ async function main() {
         // Fetch the user's encrypted private key
         const user = await prismaClient.user.findUnique({
           where: { id: zapRunDetails?.zap.userId },
-          select: { solanaPrivateKey: true }
+          select: { solanaPrivateKey: true },
         });
 
         if (!user?.solanaPrivateKey) {
@@ -204,8 +206,13 @@ async function main() {
         // Decrypt the user's private key
         const decryptedUserKey = decrypt(user.solanaPrivateKey, masterKey);
 
-        await transferSOL(SolanaData.ToSolanaAddress, SolanaData.Amount, undefined, decryptedUserKey);
-        
+        await transferSOL(
+          SolanaData.ToSolanaAddress,
+          SolanaData.Amount,
+          undefined,
+          decryptedUserKey,
+        );
+
         console.log("✅ Solana transfer completed:", {
           to: SolanaData.ToSolanaAddress,
           amount: SolanaData.Amount,
@@ -278,8 +285,80 @@ async function main() {
         console.log(
           `Google Sheets operation ${sheetsMetadata.sheetOperation} completed`,
         );
+      } else if (currentAction?.type.name === "LLM") {
+        console.log("🤖 Processing LLM action");
+        try {
+          const llmMetadata = parseJson(currentAction.metadata);
+          const dynamicFields = parseJson(dynamicFieldsVal);
+
+          if (!llmMetadata) {
+            throw new Error("LLM metadata is missing or invalid");
+          }
+
+          if (!llmMetadata.provider || !llmMetadata.model || !llmMetadata.prompt) {
+            throw new Error("Missing required LLM configuration fields");
+          }
+
+          let apiKey = llmMetadata.apiKey;
+          if (!apiKey) {
+            throw new Error("API key is required for LLM action");
+          }
+
+          if (apiKey.startsWith("ENC::")) {
+            const masterKey = process.env.SOLANA_MASTER_KEY;
+            if (!masterKey) {
+              throw new Error("SOLANA_MASTER_KEY not found in worker environment");
+            }
+            apiKey = decrypt(apiKey.substring(5), masterKey);
+          }
+
+          // Resolve prompt template placeholders
+          const resolvedPrompt = parseDynamicFields(llmMetadata.prompt, dynamicFields);
+          console.log(`Sending prompt to ${llmMetadata.provider} (${llmMetadata.model}):`, resolvedPrompt);
+
+          const llmResponse = await executeLLM({
+            provider: llmMetadata.provider,
+            apiKey,
+            model: llmMetadata.model,
+            prompt: resolvedPrompt,
+          });
+
+          console.log("LLM response received successfully");
+
+          // Save response in the execution metadata
+          const updatedMetadata = {
+            ...dynamicFields,
+            llm: {
+              response: llmResponse,
+            },
+          };
+
+          await prismaClient.zapRun.update({
+            where: { id: zapRunId },
+            data: {
+              metadata: updatedMetadata,
+            },
+          });
+
+          console.log("✅ LLM action execution completed");
+        } catch (error: any) {
+          console.error("Failed to process LLM action:", error.message);
+          const currentMetadata = parseJson(dynamicFieldsVal);
+          await prismaClient.zapRun.update({
+            where: { id: zapRunId },
+            data: {
+              metadata: {
+                ...currentMetadata,
+                llm: {
+                  error: error.message,
+                },
+              },
+            },
+          });
+        }
       }
       await new Promise((r) => setTimeout(r, 500));
+
 
       const lastStage = (zapRunDetails?.zap.actions?.length || 1) - 1;
 

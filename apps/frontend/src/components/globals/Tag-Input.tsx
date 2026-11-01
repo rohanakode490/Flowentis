@@ -41,15 +41,11 @@ export const TagInput = ({
   return (
     <div className="space-y-2">
       {label && (
-        <label
-          className="block text-sm font-medium text-foreground"
-        >
+        <label className="block text-sm font-medium text-foreground">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <div
-        className="flex flex-wrap gap-2 p-2 border rounded-md bg-input border-border"
-      >
+      <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-input border-border">
         {tags.map((tag, index) => (
           <div
             key={index}

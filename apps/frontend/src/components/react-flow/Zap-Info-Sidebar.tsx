@@ -133,13 +133,13 @@ export const Sidebar = ({
           onClose={onClose}
           nodeId={selectedNode.id}
         />
-        <div className="border-t">
+        <div className="border-t border-border pt-4">
           <Button
             onClick={openDialog}
             variant="outline"
-            className="w-full mt-4"
+            className="w-full text-xs font-medium"
           >
-            Change Trigger
+            Change {selectedNode.data.action ? "Action" : "Trigger"}
           </Button>
         </div>
       </div>

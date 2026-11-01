@@ -226,9 +226,7 @@ export default function Flow({ zapId }: FlowProps) {
             onClick={toggleChat}
             className="absolute top-48 left-7 p-2 bg-card border border-border rounded-md shadow-sm hover:bg-accent transition-colors"
           >
-            <span className="text-sm text-foreground">
-              Open AI Assistant
-            </span>
+            <span className="text-sm text-foreground">Open AI Assistant</span>
           </button>
         )}
 

@@ -41,19 +41,24 @@ export const FlowControls = ({ onAlignNodes, zapId }: FlowControlsProps) => {
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex items-center gap-2 bg-card/80 backdrop-blur-md p-1.5 rounded-xl border border-border shadow-md">
       <Button
         onClick={onAlignNodes}
-        className="self-start"
+        variant="outline"
+        size="sm"
+        className="font-medium text-xs shadow-2xs"
       >
         Align Nodes
       </Button>
+      {/* Von Restorff effect: Primary action clearly distinct */}
       <Button
         onClick={handleSaveFlow}
-        className="self-start"
-        disabled={isSaveDisabled || isSubmitting} // Combined disabled states
+        size="sm"
+        disabled={isSaveDisabled || isSubmitting}
+        isLoading={isSubmitting}
+        className="font-semibold text-xs shadow-sm shadow-primary/25"
       >
-        {isSubmitting ? "Saving..." : "Save Flow"} {/* Show loading state */}
+        Save Workflow
       </Button>
     </div>
   );

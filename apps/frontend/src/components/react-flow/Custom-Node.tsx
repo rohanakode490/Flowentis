@@ -55,9 +55,7 @@ const CustomNode = memo(({ data, id }: CustomNodeProps) => {
         )}
 
         {/* Left side: Logo */}
-        <div
-          className="rounded-full w-12 h-12 flex justify-center items-center bg-muted"
-        >
+        <div className="rounded-full w-12 h-12 flex justify-center items-center bg-muted">
           {data.image && (
             <img
               src={data.image}
@@ -69,9 +67,7 @@ const CustomNode = memo(({ data, id }: CustomNodeProps) => {
         </div>
 
         {/* Right side: Name of the Zap */}
-        <div
-          className="text-sm font-medium truncate text-foreground"
-        >
+        <div className="text-sm font-medium truncate text-foreground">
           {data.name}
         </div>
 

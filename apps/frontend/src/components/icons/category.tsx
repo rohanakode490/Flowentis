@@ -51,10 +51,9 @@ function Category({ selected }: Props) {
         width="8"
         height="8"
         rx="3"
-        className={clsx(
-          "transition-all fill-muted group-hover:fill-accent",
-          { "fill-accent-foreground/80": selected },
-        )}
+        className={clsx("transition-all fill-muted group-hover:fill-accent", {
+          "fill-accent-foreground/80": selected,
+        })}
       />
     </svg>
   );
