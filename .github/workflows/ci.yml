@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Monorepo Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate --schema=packages/database/prisma/schema.prisma
+
+      - name: Build Monorepo (Turbo)
+        run: npx turbo run build
+        env:
+          NODE_ENV: production
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/flowentis?schema=public"
+          JWT_PASSWORD: "ci_build_dummy_jwt_password_secret"
+
+      - name: Run Tests
+        run: |
+          if [ -d "tests" ] && ls tests/*.test.mjs 1> /dev/null 2>&1; then
+            echo "Running test suite..."
+            npm test
+          else
+            echo "No test files found, skipping test execution."
+          fi

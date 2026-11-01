@@ -7,6 +7,7 @@
     "dev": "turbo dev",
     "dev:server": "turbo dev --filter=@flowentis/frontend --filter=@flowentis/primary-backend --filter=@flowentis/server",
     "lint": "turbo lint",
+    "test": "node --test tests/**/*.test.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "db:update": "turbo run db:generate && turbo run db:push",
     "db:studio": "turbo run db:studio --filter=@repo/database"
