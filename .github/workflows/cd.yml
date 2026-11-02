@@ -48,10 +48,13 @@ jobs:
 
       - name: Determine Docker Hub Credentials
         id: docker_creds
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
-          if [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+          if [ -n "$DOCKERHUB_TOKEN" ]; then
             echo "has_token=true" >> $GITHUB_OUTPUT
-            echo "username=${{ secrets.DOCKERHUB_USERNAME || 'rohanakode490' }}" >> $GITHUB_OUTPUT
+            echo "username=${DOCKERHUB_USERNAME:-rohanakode490}" >> $GITHUB_OUTPUT
           else
             echo "has_token=false" >> $GITHUB_OUTPUT
             echo "username=rohanakode490" >> $GITHUB_OUTPUT
@@ -101,15 +104,26 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      - name: Check Hugging Face Token
+        id: check_hf
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -n "$HF_TOKEN" ]; then
+            echo "has_token=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_token=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Push to Hugging Face Space
-        if: ${{ secrets.HF_TOKEN != '' }}
+        if: steps.check_hf.outputs.has_token == 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           git push --force https://rakode490:$HF_TOKEN@huggingface.co/spaces/rakode490/flow-server main:main
 
       - name: Hugging Face Token Notice
-        if: ${{ secrets.HF_TOKEN == '' }}
+        if: steps.check_hf.outputs.has_token != 'true'
         run: |
           echo "HF_TOKEN secret not configured in GitHub repository secrets."
           echo "To enable automated sync to Hugging Face Spaces (rakode490/flow-server), add HF_TOKEN to repository secrets."
