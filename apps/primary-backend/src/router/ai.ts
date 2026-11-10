@@ -3,6 +3,8 @@ import { z } from "zod";
 import { Router } from "express";
 import { aiRateLimiter, authMiddleware } from "../middleware";
 import { prismaClient } from "@flowentis/database";
+import axios from "axios";
+
 
 const router = Router();
 
@@ -518,6 +520,70 @@ router.get("/limits", authMiddleware, async (req, res) => {
     res.status(500).json({
       error,
     });
+  }
+});
+
+router.post("/test-key", authMiddleware, async (req, res) => {
+  const { provider, apiKey } = req.body;
+
+  if (!provider || !apiKey) {
+    return res.status(400).json({ success: false, message: "Provider and API Key are required" });
+  }
+
+  try {
+    if (provider === "gemini") {
+      const response = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          contents: [{ parts: [{ text: "ping" }] }],
+        },
+        { timeout: 5000 }
+      );
+      if (response.status === 200) {
+        return res.json({ success: true, message: "API key is valid" });
+      }
+    } else if (provider === "openai") {
+      const response = await axios.get(
+        "https://api.openai.com/v1/models",
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          timeout: 5000
+        }
+      );
+      if (response.status === 200) {
+        return res.json({ success: true, message: "API key is valid" });
+      }
+    } else if (provider === "anthropic") {
+      const response = await axios.post(
+        "https://api.anthropic.com/v1/messages",
+        {
+          model: "claude-3-5-sonnet-20241022",
+          max_tokens: 1,
+          messages: [{ role: "user", content: "ping" }]
+        },
+        {
+          headers: {
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+          },
+          timeout: 5000
+        }
+      );
+      if (response.status === 200 || response.status === 201) {
+        return res.json({ success: true, message: "API key is valid" });
+      }
+    } else {
+      return res.status(400).json({ success: false, message: "Unsupported provider" });
+    }
+
+    return res.status(400).json({ success: false, message: "Verification failed" });
+  } catch (error: any) {
+    console.error("API key validation failed:", error.response?.data || error.message);
+    const details = error.response?.data?.error?.message || error.message;
+    return res.status(400).json({ success: false, message: `Validation failed: ${details}` });
   }
 });
 

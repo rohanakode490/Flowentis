@@ -16,7 +16,9 @@ export function Footer() {
           <div className="space-y-8">
             <div className="flex items-center gap-2">
               <Zap className="h-6 w-6 text-primary" />
-              <span className="text-foreground font-bold text-xl">Flowentis</span>
+              <span className="text-foreground font-bold text-xl">
+                Flowentis
+              </span>
             </div>
             <p className="text-muted-foreground text-lg leading-relaxed">
               A personal project to help automate your daily workflows and boost
@@ -49,7 +51,9 @@ export function Footer() {
             <div className="flex items-start gap-3">
               <Bot className="h-6 w-6 text-primary" />
               <div>
-                <h3 className="text-foreground font-semibold mb-1">AI-Powered</h3>
+                <h3 className="text-foreground font-semibold mb-1">
+                  AI-Powered
+                </h3>
                 <p className="text-muted-foreground">
                   Smart suggestions for your workflows
                 </p>

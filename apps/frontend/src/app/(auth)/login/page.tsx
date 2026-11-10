@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Error from "@/components/globals/form-error";
 import Navbar from "@/components/globals/navbar";
 import api from "@/lib/api";
@@ -27,18 +28,24 @@ export default function LogIn() {
   const router = useRouter();
 
   // Login Credentials
-  const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  //Error handler
+  // Error handler
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(""); // clear previous errors
+    setIsLoading(true);
+
+    // Postel's Law: Be liberal in what you accept (trim whitespaces, normalize lowercase)
+    const sanitizedEmail = email.trim().toLowerCase();
+
     try {
       const response = await api.post("/user/login", {
-        email,
+        email: sanitizedEmail,
         password,
       });
 
@@ -47,9 +54,6 @@ export default function LogIn() {
         localStorage.setItem("token", response.data.token);
         router.refresh();
         router.push("/workflows");
-        // setTimeout(() => {
-        //   router.push("/workflows");
-        // }, 100);
       }
     } catch (error: any) {
       addToast("Signing failed", "error");
@@ -58,91 +62,126 @@ export default function LogIn() {
       } else {
         setError("Something went wrong. Please try again after some time");
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    // window.open(`${BACKEND_URL}/user/auth/google/callback`, "_self");
     window.location.href = `${BACKEND_URL}/auth/google`;
   };
 
   const handleGithubLogin = () => {
-    // window.open(`${BACKEND_URL}/user/auth/google/callback`, "_self");
     window.location.href = `${BACKEND_URL}/auth/github`;
   };
 
   return (
     <>
       <Navbar OnlyLogo={true} />
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-[400px] bg-card border-border">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-foreground">Welcome Back</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Sign in to continue to Flowentis
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+        <Card className="w-full max-w-[420px] bg-card border-border shadow-lg">
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
+              Welcome Back
+            </CardTitle>
+            <CardDescription className="text-muted-foreground text-sm">
+              Sign in to manage and run your automated workflows
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             {/* Display if Error Present */}
             {error && <Error errorMessage={error} />}
 
-            {/* Signup Form  */}
+            {/* Login Form  */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground">
+              <div className="space-y-1.5 text-left">
+                <Label htmlFor="email" className="text-sm font-medium text-foreground">
                   Email
                 </Label>
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="email"
+                  placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-input border-border text-foreground"
+                  className="bg-input border-border text-foreground h-11"
                   required
+                  disabled={isLoading}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground">
-                  Password
-                </Label>
+              <div className="space-y-1.5 text-left">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium text-foreground">
+                    Password
+                  </Label>
+                </div>
                 <Input
                   id="password"
                   type="password"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-input border-border text-foreground"
+                  className="bg-input border-border text-foreground h-11"
                   required
+                  disabled={isLoading}
                 />
               </div>
-              <Button type="submit" className="w-full">
+
+              {/* Von Restorff effect & Fitts's law: Clear prominent primary action */}
+              <Button
+                type="submit"
+                className="w-full h-11 text-base font-medium transition-all"
+                isLoading={isLoading}
+              >
                 Sign In
               </Button>
+            </form>
+
+            {/* Hick's Law: Visual separator for secondary authentication options */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Button
                 type="button"
                 onClick={handleGoogleLogin}
-                className="w-full"
+                className="w-full h-11 justify-center gap-3 text-sm"
                 variant="outline"
+                disabled={isLoading}
               >
                 <FcGoogle className="text-lg" />
-                <span>Sign in with Google</span>
+                <span>Continue with Google</span>
               </Button>
               <Button
                 type="button"
                 onClick={handleGithubLogin}
-                className="w-full"
+                className="w-full h-11 justify-center gap-3 text-sm"
                 variant="outline"
+                disabled={isLoading}
               >
                 <SiGithub className="text-lg" />
-                <span>Sign in with Github</span>
+                <span>Continue with GitHub</span>
               </Button>
-            </form>
-            <div className="mt-4 text-center">
-              <a
+            </div>
+
+            <div className="pt-2 text-center text-sm text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Link
                 href="/signup"
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="font-medium text-primary hover:underline transition-colors"
               >
-                Don't have an account? Sign up
-              </a>
+                Sign up
+              </Link>
             </div>
           </CardContent>
         </Card>

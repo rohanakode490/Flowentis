@@ -367,10 +367,7 @@ function DynamicForm({
 
         return (
           <div className="flex flex-col gap-2">
-            <Label
-              htmlFor={field.name}
-              className="text-foreground"
-            >
+            <Label htmlFor={field.name} className="text-foreground">
               {field.label}{" "}
               {field.required && <span className="text-red-500">*</span>}
             </Label>
@@ -500,10 +497,7 @@ function DynamicForm({
           <div className="space-y-4">
             {/* Country Select */}
             <div className="flex flex-col gap-2">
-              <Label
-                htmlFor="country"
-                className="text-foreground"
-              >
+              <Label htmlFor="country" className="text-foreground">
                 Country{" "}
                 {field.required && <span className="text-red-500">*</span>}
               </Label>
@@ -540,10 +534,7 @@ function DynamicForm({
             {/* State Select */}
             {nodeData.country && (
               <div className="flex flex-col gap-2">
-                <Label
-                  htmlFor="state"
-                  className="text-foreground"
-                >
+                <Label htmlFor="state" className="text-foreground">
                   State{" "}
                 </Label>
                 <select

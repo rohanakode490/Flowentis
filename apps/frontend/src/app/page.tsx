@@ -63,8 +63,16 @@ export default function Home() {
         </div>
       </section>
 
-      <section>
+      <section id="features" className="scroll-mt-24">
         <div className="container px-4 py-10 md:py-14">
+          <div className="text-center max-w-3xl mx-auto mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+              Powerful Visual Workflow Builder
+            </h2>
+            <p className="mt-3 text-muted-foreground text-base md:text-lg">
+              Drag, connect, and automate complex logic with real-time feedback and state-of-the-art event processing.
+            </p>
+          </div>
           <ContainerScroll
             showHeader={false}
             className="h-[42rem] md:h-[52rem] p-0"

@@ -4,12 +4,14 @@ import React from "react";
 
 export default function SettingPage() {
   return (
-    <Header heading="Setting">
-      <div className="flex flex-col gap-10 p-6">
+    <Header heading="Settings">
+      <div className="flex flex-col gap-8 p-4 md:p-6 max-w-4xl">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">User Profile</h2>
-          <p className="text-base text-muted-foreground">
-            Add or Update your Information
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Account Preferences
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your personal profile details and account settings
           </p>
         </div>
         <ProfileForm />

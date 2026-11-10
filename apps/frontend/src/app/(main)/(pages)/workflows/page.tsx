@@ -5,11 +5,10 @@ import Heading from "@/components/globals/heading";
 import { Button } from "@/components/ui/button";
 import { CirclePlus } from "lucide-react";
 import GetZaps from "@/components/Zap/get-zaps";
-import ZapTable from "@/components/Zap/zap-table";
+import ZapTable, { ZapTableSkeleton } from "@/components/Zap/zap-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import useStore from "@/lib/store";
 
-// Move the searchParams logic into a separate component
 function WorkflowsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,24 +32,37 @@ function WorkflowsContent() {
       localStorage.setItem("token", token);
       router.replace("/workflows");
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, setRefreshToken]);
 
   const { loading, zaps } = GetZaps();
 
   return (
-    <div className="flex flex-col gap-6">
-      <Button
-        className="self-start ml-3 px-5 font-semibold gap-1"
-        onClick={() => {
-          router.push("/flow/create");
-        }}
-      >
-        <CirclePlus />
-        Create
-      </Button>
-      <div className="px-2">
-        {/* TODO: Create a loading component */}
-        {loading ? "loading" : <ZapTable zaps={zaps} />}
+    <div className="flex flex-col gap-6 p-4 md:p-6">
+      {/* Hick's Law & Von Restorff: Clear single primary action at top */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            All Automations
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Monitor, toggle, and configure your active automated workflows
+          </p>
+        </div>
+        <Button
+          size="default"
+          className="font-semibold gap-2 shadow-sm"
+          onClick={() => {
+            router.push("/flow/create");
+          }}
+        >
+          <CirclePlus className="h-4 w-4" />
+          Create Workflow
+        </Button>
+      </div>
+
+      {/* Doherty Threshold: High responsiveness with polished skeleton loader */}
+      <div className="w-full">
+        {loading ? <ZapTableSkeleton /> : <ZapTable zaps={zaps} />}
       </div>
     </div>
   );
@@ -59,7 +71,7 @@ function WorkflowsContent() {
 export default function WorkflowsPage() {
   return (
     <Heading heading="Workflows">
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div className="p-6"><ZapTableSkeleton /></div>}>
         <WorkflowsContent />
       </Suspense>
     </Heading>
