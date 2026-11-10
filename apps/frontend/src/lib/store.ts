@@ -3,6 +3,7 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
   Connection,
+  type XYPosition,
 } from "@xyflow/react";
 import { FormField, Webhook, Zap } from "@/lib/types";
 import { z } from "zod";
@@ -19,8 +20,12 @@ import {
   alignNodesVertically,
   EdgeType,
   NodeType,
+  VERTICAL_SPACING,
 } from "@/components/react-flow/Flow-Helpers";
-import { VERTICAL_SPACING } from "@/components/react-flow/Flow";
+import {
+  addStepAtPosition,
+  type FlowStepKind,
+} from "@/components/react-flow/Flow-Drop";
 import toast from "react-hot-toast";
 
 export interface Country {
@@ -58,6 +63,10 @@ interface FlowState {
   setOriginalTriggerMetadata: (metadata: Record<string, any>) => void;
   setCurrentTriggerType: (triggerType: string) => void;
   addNode: (sourceNodeId: string) => void;
+  addNodeAtPosition: (
+    kind: FlowStepKind,
+    position: XYPosition,
+  ) => string | null;
   handleTriggerTypeChange: (
     triggerTypeId: string,
     trigg: Record<string, any>,
@@ -459,7 +468,7 @@ const useStore = createWithEqualityFn<AppState>()(
         );
         if (result === 0) {
           addToast(
-            "Free plan allows only 3 nodes. Upgrade to UPGRADE_URL.",
+            "Free plan allows up to 3 actions. Upgrade to add more.",
             "error",
           );
         } else if (result === -1) {
@@ -470,6 +479,27 @@ const useStore = createWithEqualityFn<AppState>()(
         set((state) => {
           state.flow.edges.push(edge);
         }),
+      addNodeAtPosition: (kind, position) => {
+        const { flow, user, ui } = get();
+        const result = addStepAtPosition(
+          flow.nodes,
+          flow.edges,
+          kind,
+          position,
+          user.userSubscription,
+          crypto.randomUUID(),
+        );
+        if ("error" in result) {
+          ui.addToast(result.error, "error");
+          return null;
+        }
+        set((state) => {
+          state.flow.nodes = result.nodes;
+          state.flow.edges = result.edges;
+          state.flow.selectedNodeId = result.nodeId;
+        });
+        return result.nodeId;
+      },
       updateNodeData: (nodeId: string, data: any) =>
         set((state) => {
           const node = state.flow.nodes.find((n: any) => n.id === nodeId);

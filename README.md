@@ -87,6 +87,17 @@ Flowentis is built as a modern monorepo using **Turborepo**, ensuring consistenc
    npm run dev
    ```
 
+## Using drag-and-drop in the workflow builder
+
+Open **Create Workflow** or edit an existing workflow. Drag **Trigger** or
+**Action** from the **Add a step** palette onto the canvas, then choose an
+integration in the setup dialog. You can also click or keyboard-activate the
+palette buttons. Empty steps are reused; new actions connect to the end of the
+workflow. Each workflow has one trigger. Moving a step changes its canvas
+position; new actions run in the order they are connected. Save Flow saves the
+steps and their configuration; reopening a workflow restores the standard
+vertical layout.
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.

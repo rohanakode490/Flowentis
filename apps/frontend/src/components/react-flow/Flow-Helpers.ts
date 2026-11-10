@@ -1,4 +1,6 @@
 import { Node, Edge } from "@xyflow/react";
+
+export const VERTICAL_SPACING = 200;
 // Define types for the helper functions
 export type NodeType = Node<{
   id?: string;
@@ -23,7 +25,7 @@ export type FitViewType = (options?: {
 }) => void;
 
 /**
- * Align nodes vertically with equal spacing.
+ * Align nodes vertically in execution order, independent of dragged positions.
  */
 export const alignNodesVertically = (
   setNodes: SetNodesType,
@@ -31,8 +33,7 @@ export const alignNodesVertically = (
   VERTICAL_SPACING: number,
 ) => {
   setNodes((nds) => {
-    const sortedNodes = [...nds].sort((a, b) => a.position.y - b.position.y);
-    return sortedNodes.map((node, index) => ({
+    return nds.map((node, index) => ({
       ...node,
       position: {
         x: 0,
@@ -91,21 +92,6 @@ export const addNodeBelow = (
   };
 
   if (targetNode) {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === targetNode.id) {
-          return {
-            ...node,
-            position: {
-              ...node.position,
-              y: newY + VERTICAL_SPACING,
-            },
-          };
-        }
-        return node;
-      }),
-    );
-
     setEdges((eds) => [
       ...eds.filter((e) => e.source !== sourceNodeId),
       {
@@ -136,7 +122,15 @@ export const addNodeBelow = (
     ]);
   }
 
-  setNodes((nds) => [...nds, newNode]);
+  setNodes((nds) => {
+    const insertionIndex =
+      nds.findIndex((node) => node.id === sourceNodeId) + 1;
+    return [
+      ...nds.slice(0, insertionIndex),
+      newNode,
+      ...nds.slice(insertionIndex),
+    ];
+  });
   alignNodesVertically(setNodes, () => {}, VERTICAL_SPACING); // Mock fitView for now
 
   return 1;

@@ -1,22 +1,24 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, type XYPosition } from "@xyflow/react";
 import useWebhook from "@/hooks/Webhook";
 import { FlowControls } from "./Flow-Controls";
 import { NodeConfigDialog } from "./Node-Config-Dialog";
 import { Sidebar } from "./Zap-Info-Sidebar";
 import { FlowCanvas } from "./Flow-Canvas";
-import { addNodeBelow, alignNodesVertically, deleteNode } from "./Flow-Helpers";
+import {
+  alignNodesVertically,
+  deleteNode,
+  VERTICAL_SPACING,
+} from "./Flow-Helpers";
+import type { FlowStepKind } from "./Flow-Drop";
 import { useTheme } from "next-themes";
 import "@xyflow/react/dist/style.css";
 import { ChatInterface } from "../chat-interface/AI-ChatInterface";
 import { X } from "lucide-react";
-import userWebhook from "@/hooks/User";
 import useStore from "@/lib/store";
 import { useShallow } from "zustand/shallow";
-
-export const VERTICAL_SPACING = 200;
 
 interface FlowProps {
   zapId?: string;
@@ -38,6 +40,7 @@ export default function Flow({ zapId }: FlowProps) {
       setEdges,
       setTriggerName,
       addNode,
+      addNodeAtPosition,
       updateNodeData,
       setSelectedNodeId,
     },
@@ -53,6 +56,13 @@ export default function Flow({ zapId }: FlowProps) {
 
   const { isDialogOpen, handleWebhookSelect, openDialog, closeDialog } =
     useWebhook();
+
+  const handleAddStep = useCallback(
+    (kind: FlowStepKind, position: XYPosition) => {
+      if (addNodeAtPosition(kind, position)) openDialog();
+    },
+    [addNodeAtPosition, openDialog],
+  );
 
   // Hydration fix
   const [mounted, setMounted] = useState(false);
@@ -197,6 +207,7 @@ export default function Flow({ zapId }: FlowProps) {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={handleNodeClick}
+          onAddStep={handleAddStep}
           isDarkMode={isDarkMode}
         />
 
@@ -226,9 +237,7 @@ export default function Flow({ zapId }: FlowProps) {
             onClick={toggleChat}
             className="absolute top-48 left-7 p-2 bg-card border border-border rounded-md shadow-sm hover:bg-accent transition-colors"
           >
-            <span className="text-sm text-foreground">
-              Open AI Assistant
-            </span>
+            <span className="text-sm text-foreground">Open AI Assistant</span>
           </button>
         )}
 
